@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎰 Paaride Tombola PRO</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Icon components
+        const Copy = () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+        );
+
+        const CheckCircle = () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        );
+
+        const Play = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        );
+
+        const Shuffle = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+        );
+
+        const Download = () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+        );
+
+        const Trash2 = () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+        );
+
+        const UserPlus = () => (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            </svg>
+        );
+
+        function EnhancedPairingTool() {
+            const [students, setStudents] = useState([]);
+            const [newStudent, setNewStudent] = useState('');
+            const [inputValue, setInputValue] = useState('');
+            const [pairs, setPairs] = useState([]);
+            const [isSpinning, setIsSpinning] = useState(false);
+            const [showCopied, setShowCopied] = useState(false);
+            const [sortMethod, setSortMethod] = useState('random');
+            const [bulkInput, setBulkInput] = useState('');
+            const [showBulkInput, setShowBulkInput] = useState(false);
+
+            const sortingMethods = {
+                random: { 
+                    name: 'Juhuslik Tombola', 
+                    icon: '🎲', 
+                    description: 'Täiesti juhuslik sorteerimine',
+                    needsInput: false
+                },
+                shoesize: { 
+                    name: 'Jala Number', 
+                    icon: '👟', 
+                    description: 'Sorteerime jala numbrite järgi',
+                    needsInput: true,
+                    placeholder: 'Jala nr (nt 42)'
+                },
+                city: { 
+                    name: 'Kodulinn', 
+                    icon: '🏙️', 
+                    description: 'Sorteerime linna järgi',
+                    needsInput: true,
+                    placeholder: 'Kodulinn (nt Tallinn)'
+                },
+                siblings: { 
+                    name: 'Õed/Vennad', 
+                    icon: '👨‍👩‍👧‍👦', 
+                    description: 'Sorteerime õdede-vendade arvu järgi',
+                    needsInput: true,
+                    placeholder: 'Mitu õde/venda? (nt 2)'
+                },
+                month: { 
+                    name: 'Sünnipäeva Kuu', 
+                    icon: '🎂', 
+                    description: 'Sorteerime sünnipäeva kuu järgi',
+                    needsInput: true,
+                    placeholder: 'Kuu number (1-12)'
+                }
+            };
+
+            const funnyNames = [
+                "Kosmose Koerad", "Turbo Tiigriad", "Ninja Ninjakatid", "Mega Munad",
+                "Kiired Kitsed", "Dünamiit Delfiinid", "Tsiki Tsäkid", "Võimas Võileib",
+                "Elektri Elevandid", "Rakett Rebased", "Laser Laamad", "Tuline Teekann",
+                "Kuldne Kapsas", "Müstiline Muffin", "Äge Apelsin", "Võitja Vasikas"
+            ];
+
+            const addStudent = () => {
+                if (!newStudent.trim()) return;
+                
+                const method = sortingMethods[sortMethod];
+                let value = inputValue;
+
+                if (!method.needsInput) {
+                    value = Math.random().toString();
+                } else if (!value.trim()) {
+                    alert(`Palun sisesta ${method.placeholder}`);
+                    return;
+                }
+
+                const student = {
+                    name: newStudent.trim(),
+                    value: value,
+                    id: Date.now()
+                };
+
+                setStudents([...students, student]);
+                setNewStudent('');
+                setInputValue('');
+            };
+
+            const addBulkStudents = () => {
+                if (!bulkInput.trim()) return;
+
+                const lines = bulkInput.split('\n').filter(line => line.trim());
+                const method = sortingMethods[sortMethod];
+                
+                const newStudents = lines.map((line, index) => {
+                    const parts = line.split(',').map(p => p.trim());
+                    const name = parts[0];
+                    let value;
+
+                    if (method.needsInput && parts[1]) {
+                        value = parts[1];
+                    } else if (!method.needsInput) {
+                        value = Math.random().toString();
+                    } else {
+                        value = (Math.random() * 100).toString();
+                    }
+
+                    return {
+                        name,
+                        value,
+                        id: Date.now() + index
+                    };
+                });
+
+                setStudents([...students, ...newStudents]);
+                setBulkInput('');
+                setShowBulkInput(false);
+            };
+
+            const removeStudent = (id) => {
+                setStudents(students.filter(s => s.id !== id));
+            };
+
+            const generatePairs = () => {
+                if (students.length < 2) {
+                    alert('Vähemalt 2 õpilast vaja!');
+                    return;
+                }
+
+                setIsSpinning(true);
+                setPairs([]);
+
+                setTimeout(() => {
+                    const method = sortingMethods[sortMethod];
+                    let sortedStudents = [...students];
+
+                    if (method.needsInput) {
+                        sortedStudents.sort((a, b) => {
+                            const aVal = parseFloat(a.value) || a.value;
+                            const bVal = parseFloat(b.value) || b.value;
+                            if (typeof aVal === 'number' && typeof bVal === 'number') {
+                                return aVal - bVal;
+                            }
+                            return String(aVal).localeCompare(String(bVal));
+                        });
+                    } else {
+                        sortedStudents.sort(() => Math.random() - 0.5);
+                    }
+
+                    const newPairs = [];
+                    let usedNames = new Set();
+
+                    for (let i = 0; i < sortedStudents.length; i += 2) {
+                        let teamName;
+                        do {
+                            teamName = funnyNames[Math.floor(Math.random() * funnyNames.length)];
+                        } while (usedNames.has(teamName));
+                        usedNames.add(teamName);
+
+                        if (i + 1 < sortedStudents.length) {
+                            newPairs.push({
+                                members: [sortedStudents[i], sortedStudents[i + 1]],
+                                teamName: teamName,
+                                isTrio: false
+                            });
+                        } else {
+                            if (newPairs.length > 0) {
+                                newPairs[newPairs.length - 1].members.push(sortedStudents[i]);
+                                newPairs[newPairs.length - 1].isTrio = true;
+                            } else {
+                                newPairs.push({
+                                    members: [sortedStudents[i]],
+                                    teamName: teamName,
+                                    isTrio: false
+                                });
+                            }
+                        }
+                    }
+
+                    setPairs(newPairs);
+                    setIsSpinning(false);
+                }, 2000);
+            };
+
+            const copyToClipboard = () => {
+                const text = pairs.map((pair, i) => 
+                    `${i + 1}. ${pair.teamName}${pair.isTrio ? ' (KOLMIK)' : ''}\n   ${pair.members.map(m => m.name).join(', ')}`
+                ).join('\n\n');
+
+                navigator.clipboard.writeText(text);
+                setShowCopied(true);
+                setTimeout(() => setShowCopied(false), 2000);
+            };
+
+            const downloadCSV = () => {
+                const csv = [
+                    ['Grupp', 'Grupi Nimi', 'Liige 1', 'Liige 2', 'Liige 3'],
+                    ...pairs.map((pair, i) => [
+                        i + 1,
+                        pair.teamName,
+                        pair.members[0]?.name || '',
+                        pair.members[1]?.name || '',
+                        pair.members[2]?.name || ''
+                    ])
+                ].map(row => row.join(',')).join('\n');
+
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `paarid_${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+            };
+
+            const currentMethod = sortingMethods[sortMethod];
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 p-4">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
+                            {/* Header */}
+                            <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-8 text-white">
+                                <h1 className="text-5xl font-black text-center mb-2">
+                                    🎰 PAARIDE TOMBOLA PRO
+                                </h1>
+                                <p className="text-center text-purple-100 text-lg">
+                                    Genereeri juhuslikud paarid ja kolmikud!
+                                </p>
+                            </div>
+
+                            <div className="p-8">
+                                {/* Sorting Method Selection */}
+                                <div className="mb-8">
+                                    <label className="block text-xl font-bold mb-4 text-gray-800">
+                                        Vali sorteerimise meetod:
+                                    </label>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                        {Object.entries(sortingMethods).map(([key, method]) => (
+                                            <button
+                                                key={key}
+                                                onClick={() => {
+                                                    setSortMethod(key);
+                                                    setPairs([]);
+                                                }}
+                                                className={`p-4 rounded-xl border-4 transition-all ${
+                                                    sortMethod === key
+                                                        ? 'border-purple-600 bg-purple-50 scale-105'
+                                                        : 'border-gray-200 hover:border-purple-300'
+                                                }`}
+                                            >
+                                                <div className="text-4xl mb-2">{method.icon}</div>
+                                                <div className="font-bold text-lg">{method.name}</div>
+                                                <div className="text-sm text-gray-600">{method.description}</div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Add Students Section */}
+                                <div className="mb-8 bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-2xl">
+                                    <h2 className="text-2xl font-black mb-4 text-gray-800">
+                                        Lisa Õpilased
+                                    </h2>
+
+                                    {/* Single Student Input */}
+                                    <div className="flex gap-3 mb-4">
+                                        <input
+                                            type="text"
+                                            value={newStudent}
+                                            onChange={(e) => setNewStudent(e.target.value)}
+                                            onKeyPress={(e) => e.key === 'Enter' && addStudent()}
+                                            placeholder="Õpilase nimi"
+                                            className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 outline-none"
+                                        />
+                                        {currentMethod.needsInput && (
+                                            <input
+                                                type="text"
+                                                value={inputValue}
+                                                onChange={(e) => setInputValue(e.target.value)}
+                                                onKeyPress={(e) => e.key === 'Enter' && addStudent()}
+                                                placeholder={currentMethod.placeholder}
+                                                className="w-48 px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 outline-none"
+                                            />
+                                        )}
+                                        <button
+                                            onClick={addStudent}
+                                            className="px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 flex items-center gap-2"
+                                        >
+                                            <UserPlus />
+                                            Lisa
+                                        </button>
+                                    </div>
+
+                                    {/* Bulk Input Toggle */}
+                                    <button
+                                        onClick={() => setShowBulkInput(!showBulkInput)}
+                                        className="text-purple-600 font-bold mb-4 hover:underline"
+                                    >
+                                        {showBulkInput ? '▼' : '▶'} Lisa mitu õpilast korraga
+                                    </button>
+
+                                    {/* Bulk Input */}
+                                    {showBulkInput && (
+                                        <div className="mb-4">
+                                            <textarea
+                                                value={bulkInput}
+                                                onChange={(e) => setBulkInput(e.target.value)}
+                                                placeholder={currentMethod.needsInput 
+                                                    ? `Iga õpilane uuele reale:\nMari, 38\nJaan, 42\nKati, 37`
+                                                    : `Iga õpilane uuele reale:\nMari\nJaan\nKati`
+                                                }
+                                                className="w-full h-32 px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-purple-500 outline-none font-mono text-sm"
+                                            />
+                                            <button
+                                                onClick={addBulkStudents}
+                                                className="mt-2 px-6 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700"
+                                            >
+                                                Lisa kõik
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Students List */}
+                                    <div className="space-y-2">
+                                        <div className="font-bold text-gray-700">
+                                            Õpilased ({students.length})
+                                        </div>
+                                        {students.map((student) => (
+                                            <div
+                                                key={student.id}
+                                                className="flex items-center justify-between p-3 bg-white rounded-xl border-2 border-gray-200"
+                                            >
+                                                <div>
+                                                    <span className="font-bold">{student.name}</span>
+                                                    {currentMethod.needsInput && (
+                                                        <span className="ml-3 text-gray-600">
+                                                            {currentMethod.icon} {student.value}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    onClick={() => removeStudent(student.id)}
+                                                    className="text-red-600 hover:bg-red-50 p-2 rounded-lg"
+                                                >
+                                                    <Trash2 />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Generate Button */}
+                                {students.length >= 2 && !isSpinning && pairs.length === 0 && (
+                                    <button
+                                        onClick={generatePairs}
+                                        className="w-full py-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl font-black text-2xl hover:scale-105 transition-transform shadow-xl flex items-center justify-center gap-3"
+                                    >
+                                        <Play className="w-10 h-10" />
+                                        GENEREERI PAARID!
+                                    </button>
+                                )}
+
+                                {/* Spinning Animation */}
+                                {isSpinning && (
+                                    <div className="text-center py-16">
+                                        <Shuffle className="w-32 h-32 mx-auto text-purple-600 animate-spin" />
+                                        <div className="text-4xl font-black mt-6 text-purple-600 animate-pulse">
+                                            🎰 TOMBOLA TOIMUB... 🎰
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Results */}
+                                {pairs.length > 0 && !isSpinning && (
+                                    <div className="space-y-6">
+                                        {/* Action Buttons */}
+                                        <div className="flex gap-4">
+                                            <button
+                                                onClick={copyToClipboard}
+                                                className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 flex items-center justify-center gap-2"
+                                            >
+                                                {showCopied ? <CheckCircle /> : <Copy />}
+                                                {showCopied ? 'Kopeeritud!' : 'Kopeeri'}
+                                            </button>
+                                            <button
+                                                onClick={downloadCSV}
+                                                className="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 flex items-center justify-center gap-2"
+                                            >
+                                                <Download />
+                                                Lae CSV
+                                            </button>
+                                        </div>
+
+                                        {/* Pairs Display */}
+                                        {pairs.map((pair, index) => (
+                                            <div
+                                                key={index}
+                                                className="p-6 rounded-2xl border-4 bg-gradient-to-r from-purple-50 to-pink-50 border-purple-300"
+                                            >
+                                                <div className="flex items-center gap-4 mb-4">
+                                                    <div className="w-16 h-16 rounded-full flex items-center justify-center font-black text-2xl text-white bg-gradient-to-br from-purple-600 to-pink-600 shadow-lg">
+                                                        {index + 1}
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-3xl font-black text-gray-800">
+                                                            {pair.teamName}
+                                                        </h3>
+                                                        {pair.isTrio && (
+                                                            <span className="text-orange-600 text-sm font-bold">
+                                                                👥 KOLMIK
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    {pair.members.map((student, idx) => (
+                                                        <div
+                                                            key={idx}
+                                                            className="p-4 bg-white rounded-xl shadow flex justify-between items-center"
+                                                        >
+                                                            <span className="font-bold text-lg">{student.name}</span>
+                                                            {currentMethod.needsInput && (
+                                                                <span className="text-gray-600">
+                                                                    {currentMethod.icon} {student.value}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        {/* Regenerate Button */}
+                                        <button
+                                            onClick={generatePairs}
+                                            className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-xl hover:scale-105 transition-transform shadow-lg flex items-center justify-center gap-3"
+                                        >
+                                            <Shuffle className="w-6 h-6" />
+                                            TOMBOLA UUESTI!
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<EnhancedPairingTool />);
+    </script>
+</body>
+</html>
